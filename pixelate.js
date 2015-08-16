@@ -1,7 +1,6 @@
 var fs = require('fs');
 var im= require('imagemagick');
 var Q = require('q');
-var shrinkSize = 10;
 
 function getInfo(name) {
     var deferred = Q.defer();
@@ -25,21 +24,41 @@ function resizeImage(sourcePath, destPath, size) {
         if (err) deferred.reject(err);
         deferred.resolve();
     });
-//    }, deferred.resolve(err, stdout, stderr));
+    return deferred.promise;
+}
+
+function convertImage(sourcePath, destPath, width) {
+    var deferred = Q.defer();
+    im.convert([sourcePath, '-scale', width + 'x' + width, destPath],
+        function(err, stdout){
+            if (err) deferred.reject(err);
+            deferred.resolve(sourcePath);
+        });
+    return deferred.promise;
+}
+
+function deleteImage(sourcePath) {
+    var deferred = Q.defer();
+    fs.unlink(sourcePath, function (err) {
+        if (err) throw err;
+        deferred.resolve();
+    });
     return deferred.promise;
 }
 
 function pixelateImage(info, size) {
     var deferred = Q.defer();
     resizeImage('./Images/' + info.name,
-                './Images/' + info.shortName + size + '.jpg',
+                './Images/' + info.shortName + '-' + size + '-tiny.jpg',
                 size)
     .then(function(){
-        //TODO use resized to resize the image again.
+        return convertImage('./Images/' + info.shortName + '-' + size + '-tiny.jpg',
+                    './Images/' + info.shortName + '-' + size + '-pixel.jpg',
+                    300);
+    })
+    .then(function(tinyImage) {
         deferred.resolve(
-            resizeImage( './Images/' + info.shortName + size + '.jpg',
-                        './Images/' + info.shortName + info.width + '.jpg',
-                        info.width)
+            deleteImage(tinyImage)
         );
     })
     .catch(function(error) {
@@ -55,17 +74,33 @@ fs.readdir('./Images', function (err, files) {
         if(files[i].search('jpg') != -1 || files[i].search('jpeg') != -1){
             getInfo(files[i])
             .then(function(info){
-                return pixelateImage(info, shrinkSize);
+//                return pixelateImage(info, j);
+                return Q.all([
+                    pixelateImage(info, 5),
+                    pixelateImage(info, 6),
+                    pixelateImage(info, 7),
+                    pixelateImage(info, 8),
+                    pixelateImage(info, 9),
+                    pixelateImage(info, 10),
+                    pixelateImage(info, 11),
+                    pixelateImage(info, 12),
+                    pixelateImage(info, 13),
+                    pixelateImage(info, 14),
+                    pixelateImage(info, 15),
+                    pixelateImage(info, 16),
+                    pixelateImage(info, 17),
+                    pixelateImage(info, 18),
+                    pixelateImage(info, 19),
+                    pixelateImage(info, 20)
+                ]);
             })
             .catch(function(error) {
                 console.log(error);
-            });
+            })
+            .done();
         }
         else {
             //do nothing
         }
     }
-    //Loop through images
-    //1 make dir with name
-    //resize to 5 through 20 pixels across
 });
