@@ -5,9 +5,10 @@ var Q = require('q');
 function getInfo(name) {
     var deferred = Q.defer();
     im.identify(name, function(err, features){
+        if (err) throw err;
         deferred.resolve({
             name: features.artifacts.filename,
-            shortName: features.artifacts.filename.substr(0, features.artifacts.filename.indexOf('.')),
+            shortName: features.artifacts.filename.substr(0, features.artifacts.filename.indexOf('.' ,1)), //find second '.'
             width: features.width
         });
     });
@@ -27,7 +28,7 @@ function resizeImage(sourcePath, destPath, size) {
     return deferred.promise;
 }
 
-function convertImage(sourcePath, destPath, width) {
+function scaleToWidth(sourcePath, destPath, width) {
     var deferred = Q.defer();
     im.convert([sourcePath, '-scale', width + 'x' + width, destPath],
         function(err, stdout){
@@ -48,12 +49,12 @@ function deleteImage(sourcePath) {
 
 function pixelateImage(info, size) {
     var deferred = Q.defer();
-    resizeImage('./Images/' + info.name,
-                './Images/' + info.shortName + '-' + size + '-tiny.jpg',
+    resizeImage(info.name,
+                info.shortName + '-' + size + '-tiny.jpg',
                 size)
     .then(function(){
-        return convertImage('./Images/' + info.shortName + '-' + size + '-tiny.jpg',
-                    './Images/' + info.shortName + '-' + size + '-pixel.jpg',
+        return scaleToWidth(info.shortName + '-' + size + '-tiny.jpg',
+                    info.shortName + '-' + size + '-pixel.jpg',
                     300);
     })
     .then(function(tinyImage) {
@@ -71,8 +72,8 @@ function pixelateImage(info, size) {
 fs.readdir('./Images', function (err, files) {
     if (err) throw err;
     for(var i = 0; i < files.length; i++) {
-        if(files[i].search('jpg') != -1 || files[i].search('jpeg') != -1){
-            getInfo(files[i])
+        if(files[i].search('jpg') != -1 || files[i].search('jpeg') != -1 || files[i].search('JPG') != -1){
+            getInfo('./Images/' + files[i])
             .then(function(info){
 //                return pixelateImage(info, j);
                 return Q.all([
