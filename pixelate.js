@@ -8,19 +8,29 @@ function getInfo(name) {
         if (err) throw err;
         deferred.resolve({
             name: features.artifacts.filename,
-            shortName: features.artifacts.filename.substr(0, features.artifacts.filename.indexOf('.' ,1)), //find second '.'
+            shortName: features.artifacts.filename.substring(features.artifacts.filename.lastIndexOf('/')+1, features.artifacts.filename.lastIndexOf('.')), //find second '.'
             width: features.width
         });
     });
     return deferred.promise;
 }
 
-function resizeImage(sourcePath, destPath, size) {
+function makeDirectory(info) {
+    var deferred = Q.defer();
+    fs.mkdir('./Images/' + info.shortName, function(err) {
+        if (err) throw err;
+        deferred.resolve(info);
+    });
+    return deferred.promise;
+}
+
+function resizeImage(sourcePath, destPath, size, type) {
     var deferred = Q.defer();
     im.resize({
         srcPath: sourcePath,
         dstPath: destPath,
-        width:   size
+        width:   size,
+        format: type
     }, function(err, stdout, stderr){
         if (err) deferred.reject(err);
         deferred.resolve();
@@ -47,19 +57,19 @@ function deleteImage(sourcePath) {
     return deferred.promise;
 }
 
-function pixelateImage(info, size) {
+function pixelateImage(sourcePath, destDir, shortName, size, type) {
     var deferred = Q.defer();
-    resizeImage(info.name,
-                info.shortName + '-' + size + '-tiny.jpg',
-                size)
+    resizeImage(sourcePath,
+                shortName + '-' + size + '-tiny.' + type,
+                size, type)
     .then(function(){
-        return scaleToWidth(info.shortName + '-' + size + '-tiny.jpg',
-                    info.shortName + '-' + size + '-pixel.jpg',
+        return scaleToWidth(shortName + '-' + size + '-tiny.' + type,
+                    './' + destDir + '/' + shortName + '-' + size + '-pixel.' + type,
                     300);
     })
-    .then(function(tinyImage) {
+    .then(function(tempImage) {
         deferred.resolve(
-            deleteImage(tinyImage)
+            deleteImage(tempImage)
         );
     })
     .catch(function(error) {
@@ -74,34 +84,31 @@ fs.readdir('./Images', function (err, files) {
     for(var i = 0; i < files.length; i++) {
         if(files[i].search('jpg') != -1 || files[i].search('jpeg') != -1 || files[i].search('JPG') != -1){
             getInfo('./Images/' + files[i])
+            .then(function(info) {
+                return makeDirectory(info);
+            })
             .then(function(info){
-//                return pixelateImage(info, j);
                 return Q.all([
-                    pixelateImage(info, 5),
-                    pixelateImage(info, 6),
-                    pixelateImage(info, 7),
-                    pixelateImage(info, 8),
-                    pixelateImage(info, 9),
-                    pixelateImage(info, 10),
-                    pixelateImage(info, 11),
-                    pixelateImage(info, 12),
-                    pixelateImage(info, 13),
-                    pixelateImage(info, 14),
-                    pixelateImage(info, 15),
-                    pixelateImage(info, 16),
-                    pixelateImage(info, 17),
-                    pixelateImage(info, 18),
-                    pixelateImage(info, 19),
-                    pixelateImage(info, 20)
+                    pixelateImage(info.name, './Images/' + info.shortName, info.shortName, 5, 'png'),
+                    pixelateImage(info.name, './Images/' + info.shortName, info.shortName, 6, 'png'),
+                    pixelateImage(info.name, './Images/' + info.shortName, info.shortName, 7, 'png'),
+                    pixelateImage(info.name, './Images/' + info.shortName, info.shortName, 8, 'png'),
+                    pixelateImage(info.name, './Images/' + info.shortName, info.shortName, 9, 'png'),
+                    pixelateImage(info.name, './Images/' + info.shortName, info.shortName, 10, 'png'),
+                    pixelateImage(info.name, './Images/' + info.shortName, info.shortName, 11, 'png'),
+                    pixelateImage(info.name, './Images/' + info.shortName, info.shortName, 12, 'png'),
+                    pixelateImage(info.name, './Images/' + info.shortName, info.shortName, 13, 'png'),
+                    pixelateImage(info.name, './Images/' + info.shortName, info.shortName, 14, 'png'),
+                    pixelateImage(info.name, './Images/' + info.shortName, info.shortName, 15, 'png'),
+                    pixelateImage(info.name, './Images/' + info.shortName, info.shortName, 16, 'png')
                 ]);
             })
             .catch(function(error) {
                 console.log(error);
             })
-            .done();
-        }
-        else {
-            //do nothing
+            .done(function() {
+                console.log('DONE');
+            });
         }
     }
 });

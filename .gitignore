@@ -1,0 +1,5 @@
+working_directory
+*.sublime*
+bak*
+node_modules
+package.json
